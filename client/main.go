@@ -11,15 +11,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 )
 
-// string id = 1;
-// MessageType message_type = 2;
-// string topic = 3;
-// string sender_id = 4; // client/system sending this message
-// string connection_id = 5; // id of the connection where the message is sent
-// string transaction_id = 6;
-// bytes content = 7;
-// int64 timestamp = 8;
-
 type Message struct {
 	ID            string `cbor:"id"`
 	MessageType   uint32 `cbor:"message_type"`
