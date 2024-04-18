@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"time"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 type Message struct {
@@ -91,11 +94,11 @@ func handleClient(conn net.Conn) {
 		}
 		// Process the parsed messages
 		for _, message := range messages {
-			// var msg Message
-			// err := cbor.Unmarshal(message, &msg)
-			// if err != nil {
-			// 	log.Fatal("could not parse message", msg.ID)
-			// }
+			var msg Message
+			err := cbor.Unmarshal(message, &msg)
+			if err != nil {
+				log.Fatal("could not parse message", msg.ID)
+			}
 
 			msgCount += 1
 			bytesCount += len(message)
