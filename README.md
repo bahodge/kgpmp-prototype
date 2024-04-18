@@ -41,12 +41,22 @@ Each message is to be prefixed by a 4 byte integer describing the length of the 
 <prefix><op>\r\n<metadata>\r\n<topic>\r\n<content>\r\n
 ```
 
+Examples
+```
+51PUB\r\ntoken=secret;\r\n/hello/world\r\nhello\r\n
+```
+
 ### Protocol 2
 
-Each message is prefixed by a 4 byte integer describing the length of the message. The content of the body is encoded using cbor using a predefined message structure. Although there are benefits in the simplicity of this route, it does include a requirement to deserialize the content in order to determine where to route a message. This means that the server is doing a full deserialization of the message, looking at a subset of fields and then forwarding that messaging to the target client(s). It does make everything much simpler. I do like
+Each message is prefixed by a 4 byte integer describing the length of the message. The content of the body is encoded using cbor using a predefined message structure. Although there are benefits in the simplicity of this route, it does include a requirement to deserialize the content in order to determine where to route a message. This means that the server is doing a full deserialization of the message, looking at a subset of fields and then forwarding that messaging to the target client(s). It does make everything much simpler. Although the structure is much more concise, it does require a core dependency to an encoding dependency.
 
 ```
 <prefix><content>
+```
+
+Examples
+```
+19binaryencodeddata
 ```
 
 ### Protocol 3
@@ -55,4 +65,9 @@ This protocol minimizes the required encoding/decoding to just focus on handling
 
 ```
 <prefix><op> <topic>\r\n<metadata>\r\ncontent\r\n
+```
+
+Examples
+```
+59PUB /hello/world\r\nbinaryencodeddata\r\nmysecretdata\r\n
 ```
