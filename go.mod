@@ -1,4 +1,4 @@
-module github.com/bahodge/customprotocol
+module github.com/bahodge/kgpmp-prototype
 
 go 1.22.0
 

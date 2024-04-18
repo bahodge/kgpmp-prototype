@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
+	"github.com/bahodge/kgpmp-prototype/pkg/parsers"
 	"net"
 	"time"
 )
@@ -14,46 +14,6 @@ type Message struct {
 	TransactionID string `cbor:"transaction_id"`
 	Content       []byte `cbor:"content"`
 	Timestamp     int64  `cbor:"timestamp"`
-}
-
-type MessageParser struct {
-	buffer []byte
-}
-
-func NewMessageParser() *MessageParser {
-	return &MessageParser{
-		buffer: make([]byte, 0),
-	}
-}
-
-func (p *MessageParser) Parse(data []byte) ([][]byte, error) {
-	var messages [][]byte
-
-	// Append incoming data to the buffer
-	p.buffer = append(p.buffer, data...)
-
-	// Parse complete messages from the buffer
-	for len(p.buffer) >= 4 {
-		// Read the length prefix
-		messageLength := binary.BigEndian.Uint32(p.buffer[:4])
-
-		// Check if the buffer contains the complete message
-		if len(p.buffer) >= int(messageLength)+4 {
-			// Slice the buffer to extract message content
-			message := p.buffer[4 : 4+messageLength]
-
-			// Append the message to the list of parsed messages
-			messages = append(messages, message)
-
-			// Remove the parsed message from the buffer
-			p.buffer = p.buffer[4+messageLength:]
-		} else {
-			// Incomplete message in the buffer, wait for more data
-			break
-		}
-	}
-
-	return messages, nil
 }
 
 func handleClient(conn net.Conn) {
@@ -69,8 +29,8 @@ func handleClient(conn net.Conn) {
 
 	}()
 
-	// Create a new message parser for each client connection
-	parser := NewMessageParser()
+	// Create a new message p for each client connection
+	p := parsers.NewMessageParser()
 
 	// Buffer to store incoming data from the client
 	buffer := make([]byte, 1024*1024)
@@ -84,7 +44,7 @@ func handleClient(conn net.Conn) {
 		}
 
 		// Parse complete messages from the received data
-		messages, err := parser.Parse(buffer[:n])
+		messages, err := p.ParseLengthPrefixedMessage(buffer[:n])
 		if err != nil {
 			fmt.Println("Error parsing messages:", err)
 			return
