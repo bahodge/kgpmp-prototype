@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/bahodge/kgpmp-prototype/pkg/protocol"
 )
@@ -33,8 +35,9 @@ func main() {
 	// }
 	// defer conn.Close()
 
+	start := time.Now()
 	m := protocol.KoboldMessage{
-		ID:    "some id",
+		// ID:    fmt.Sprintf("%d", i),
 		Op:    protocol.Reply,
 		Topic: "some topic",
 		Metadata: protocol.KoboldMetadata{
@@ -43,25 +46,98 @@ func main() {
 			Token:        "asdf",
 		},
 		TxID:    "fffff",
-		Content: []byte("here is some content"),
+		Content: []byte(""),
 	}
 
-	fmt.Printf("m %#v\n", m)
+	serializationStart := time.Now()
 
-	s, err := protocol.Serialize(m)
-	if err != nil {
-		log.Fatal("could not serialize message", err)
+	var buf bytes.Buffer
+
+	buf.Grow(256)
+	chunks := [][]byte{}
+
+	flushCount := 0
+	serializeCount := 0
+	msgsInBuffer := 0
+	for i := 0; i < 10; i++ {
+		m.ID = fmt.Sprintf("%d", i)
+
+		s, err := protocol.Serialize(m)
+		if err != nil {
+			log.Fatal("could not serialize message", err)
+		}
+
+		serializeCount++
+
+		if buf.Len()+len(s) > buf.Cap() {
+			fmt.Println("Buffer is full!", buf.Len(), msgsInBuffer)
+			// flush the buffer to the "parser"
+			chunks = append(chunks, buf.Bytes())
+			buf.Reset()
+			flushCount++
+			msgsInBuffer = 0
+		}
+
+		msgsInBuffer++
+		_, err = buf.Write(s)
+		if err != nil {
+			log.Fatal("could not write to buffer")
+		}
 	}
 
-	fmt.Printf("s %#v\n", string(s))
-
-	var dec protocol.KoboldMessage
-	err = protocol.Deserialize(s[4:], &dec)
-	if err != nil {
-		log.Fatal("could not deserialize message", err)
+	if buf.Len() > 0 {
+		chunks = append(chunks, buf.Bytes())
+		buf.Reset()
+		flushCount++
+		msgsInBuffer = 0
 	}
 
-	fmt.Printf("dec %#v\n", dec)
+	serializationEnd := time.Now()
+	parsingStart := time.Now()
+	parser := protocol.NewMessageParser()
+
+	var rawMessages [][]byte
+	parsedCount := 0
+	for _, chunk := range chunks {
+		messages, err := parser.Parse(chunk)
+		if err != nil {
+			log.Fatal("unable to parse data", err)
+		}
+
+		parsedCount += len(messages)
+		rawMessages = append(rawMessages, messages...)
+	}
+
+	parsingEnd := time.Now()
+
+	deserializationStart := time.Now()
+	deserializedCount := 0
+	deserializedMessages := []protocol.KoboldMessage{}
+	for _, msg := range rawMessages {
+		var deserializedMessage protocol.KoboldMessage
+		err := protocol.Deserialize(msg, &deserializedMessage)
+		if err != nil {
+			log.Fatal("could not deserialize message", err)
+		}
+
+		deserializedMessages = append(deserializedMessages, deserializedMessage)
+		deserializedCount++
+	}
+
+	deserializationEnd := time.Now()
+
+	fmt.Println("serialization time", serializationEnd.Sub(serializationStart))
+	fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
+	fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
+	fmt.Println("serialized items", serializeCount)
+	// fmt.Println("flushed items", flushCount)
+	fmt.Println("parsedCount items", parsedCount)
+	fmt.Println("deserialized items", deserializedCount)
+	fmt.Println("total time", time.Since(start))
+
+	// fmt.Printf("s %#v\n", string(s))
+
+	// fmt.Printf("dec %#v\n", dec)
 
 	// cbormsg := Message{
 	// 	ID:            "",

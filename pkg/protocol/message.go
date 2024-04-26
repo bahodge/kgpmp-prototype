@@ -50,20 +50,23 @@ func Serialize(msg KoboldMessage) ([]byte, error) {
 		return nil, err
 	}
 
+	// Check if payload exceeds maximum message size
+	if len(payload) > MAX_MSG_SIZE {
+		return nil, errors.New("message is too large")
+	}
+
+	// Write payload length prefix to the buffer
 	bytesBigEndian := make([]byte, 4)
 	binary.BigEndian.PutUint32(bytesBigEndian, uint32(len(payload)))
 	_, err = buf.Write(bytesBigEndian)
 	if err != nil {
 		return nil, err
 	}
+
+	// Write payload to the buffer
 	_, err = buf.Write(payload)
 	if err != nil {
 		return nil, err
-	}
-
-	// get the length of the the payload and prepend a buf
-	if buf.Len() > MAX_MSG_SIZE {
-		return nil, errors.New("message is too large")
 	}
 
 	return buf.Bytes(), nil

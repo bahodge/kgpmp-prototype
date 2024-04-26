@@ -44,7 +44,7 @@ func handleClient(conn net.Conn) {
 		}
 
 		// Parse complete messages from the received data
-		messages, err := p.ParseLengthPrefixedMessage(buffer[:n])
+		messages, err := p.Parse(buffer[:n])
 		if err != nil {
 			fmt.Println("Error parsing messages:", err)
 			return
