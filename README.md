@@ -40,12 +40,16 @@ I think that it's pretty important that the `node` no as little information as t
 
 ```go
 type KoboldProto struct {
-	ID            string          `cbor:"id"`
-	Operation     KoboldOperation `cbor:"op"`
-	Topic         string          `cbor:"topic"`
-	Metadata      KoboldMetadata  `cbor:"metadata,omitempty"`
-	Headers       map[string]any  `cbor:"headers,omitempty"`
-	TransactionID string          `cbor:"tx_id,omitempty"`
+        // Client scoped unique indentifier for this message
+	ID string `cbor:"id"`
+	// Operation to be performed
+	Operation KoboldOperation `cbor:"op"`
+	// the topic for which this message is to be forwarded to
+	Topic string `cbor:"topic"`
+	// data describing the message and it's origins
+	Metadata KoboldMetadata `cbor:"metadata,omitempty"`
+	// globally unique id used to tie the request and reply together to the same client/connection
+	TransactionID string `cbor:"tx_id,omitempty"`
 }
 ```
 
