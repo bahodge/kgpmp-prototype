@@ -68,3 +68,12 @@ Examples
 # request
 <prefix><BINARYENCODEDPROTO>\r\nmycoolcontent\r\n
 ```
+
+## Behavior
+
+### Proxy
+
+```
+# on connect to node a client will advertise
+/<client_id>/proxy
+```
