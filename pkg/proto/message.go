@@ -1,6 +1,6 @@
 package proto
 
-type KoboldOperation uint16
+type KoboldOperation uint8
 
 const (
 	Unsupported KoboldOperation = iota
