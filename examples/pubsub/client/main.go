@@ -6,8 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/bahodge/kgpmp-prototype/pkg/proto"
-	"github.com/fxamacker/cbor/v2"
+	"github.com/bahodge/kgpmp-prototype/pkg/protocol"
 )
 
 func SendMessage(conn net.Conn, message []byte) error {
@@ -34,25 +33,32 @@ func main() {
 	// }
 	// defer conn.Close()
 
-	p := proto.KoboldMessage{
+	m := protocol.KoboldMessage{
 		ID:    "some id",
-		Op:    proto.Reply,
+		Op:    protocol.Reply,
 		Topic: "some topic",
+		Metadata: protocol.KoboldMetadata{
+			ClientID:     "1",
+			ConnectionID: "123",
+			Token:        "asdf",
+		},
+		TxID:    "fffff",
+		Content: []byte("here is some content"),
 	}
 
-	fmt.Printf("p %#v\n", p)
+	fmt.Printf("m %#v\n", m)
 
-	b, err := cbor.Marshal(p)
+	s, err := protocol.Serialize(m)
 	if err != nil {
-		log.Fatal("could not encode message", err)
+		log.Fatal("could not serialize message", err)
 	}
 
-	fmt.Printf("b %#v\n", b)
+	fmt.Printf("s %#v\n", string(s))
 
-	var dec proto.KoboldMessage
-	err = cbor.Unmarshal(b, &dec)
+	var dec protocol.KoboldMessage
+	err = protocol.Deserialize(s[4:], &dec)
 	if err != nil {
-		log.Fatal("could not decode message", err)
+		log.Fatal("could not deserialize message", err)
 	}
 
 	fmt.Printf("dec %#v\n", dec)

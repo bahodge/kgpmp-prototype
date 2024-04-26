@@ -50,9 +50,8 @@ type KoboldProto struct {
 	Metadata KoboldMetadata `cbor:"metadata,omitempty"`
 	// Used for request/reply to tie the request and reply together to the same client/connection
 	TxID string `cbor:"tx_id,omitempty"`
-	// Used for proxy connection where bytes are sent to and fro
-	SenderConnID   string `cbor:"sender_conn_id,omitempty"`
-	ReceiverConnID string `cbor:"receiver_conn_id,omitempty"`
+
+	Content []byte `cbor:"content,omitempty"`
 }
 ```
 
