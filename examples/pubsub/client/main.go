@@ -35,9 +35,9 @@ func main() {
 	// defer conn.Close()
 
 	p := proto.KoboldMessage{
-		ID:        "some id",
-		Operation: proto.Reply,
-		Topic:     "some topic",
+		ID:    "some id",
+		Op:    proto.Reply,
+		Topic: "some topic",
 	}
 
 	fmt.Printf("p %#v\n", p)
