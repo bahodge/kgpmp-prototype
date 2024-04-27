@@ -92,7 +92,7 @@ This is all running on my local machine and therefore all tests are uncontrolled
 ```
 goos: linux
 goarch: amd64
-pkg: github.com/bahodge/kgpmp-prototype/examples/pubsub/client
+pkg: github.com/bahodge/kgpmp-prototype
 cpu: 13th Gen Intel(R) Core(TM) i9-13900K
 BenchmarkRunCapn1
 BenchmarkRunCapn1-24          	    2822	    446723 ns/op
