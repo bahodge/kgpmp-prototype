@@ -33,12 +33,12 @@ type KoboldMetadata struct {
 // TODO: I think that most of the metadata can be put in the main message and omitted as neccessary
 
 type KoboldMessage struct {
-	ID       string          `cbor:"id" json:"id"`
-	Op       KoboldOperation `cbor:"op" json:"op"`
-	Topic    string          `cbor:"topic" json:"topic"`
-	Metadata KoboldMetadata  `cbor:"metadata,omitempty" json:"metadata,omitempty"`
-	TxID     string          `cbor:"tx_id,omitempty" json:"tx_id,omitempty"`
-	Content  []byte          `cbor:"content,omitempty" json:"content,omitempty"`
+	ID       string          `cbor:"id"`
+	Op       KoboldOperation `cbor:"op"`
+	Topic    string          `cbor:"topic"`
+	Metadata KoboldMetadata  `cbor:"metadata,omitempty"`
+	TxID     string          `cbor:"tx_id,omitempty"`
+	Content  []byte          `cbor:"content,omitempty"`
 }
 
 func SerializeCBOR(msg KoboldMessage) ([]byte, error) {
