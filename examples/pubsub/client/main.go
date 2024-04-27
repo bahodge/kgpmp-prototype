@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -38,28 +37,18 @@ func main() {
 	start := time.Now()
 	m := protocol.KoboldMessage{
 		// ID:    fmt.Sprintf("%d", i),
-		Op:    protocol.Reply,
-		Topic: "some topic",
-		Metadata: protocol.KoboldMetadata{
-			ClientID:     "1",
-			ConnectionID: "123",
-			Token:        "asdf",
-		},
-		TxID:    "fffff",
+		Op:      protocol.Reply,
+		Topic:   "test",
+		TxID:    "",
 		Content: []byte(""),
 	}
 
 	serializationStart := time.Now()
 
-	var buf bytes.Buffer
-
-	buf.Grow(256)
 	chunks := [][]byte{}
 
-	flushCount := 0
 	serializeCount := 0
-	msgsInBuffer := 0
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1_000_000; i++ {
 		m.ID = fmt.Sprintf("%d", i)
 
 		s, err := protocol.Serialize(m)
@@ -67,30 +56,12 @@ func main() {
 			log.Fatal("could not serialize message", err)
 		}
 
+		chunks = append(chunks, s)
+
 		serializeCount++
-
-		if buf.Len()+len(s) > buf.Cap() {
-			fmt.Println("Buffer is full!", buf.Len(), msgsInBuffer)
-			// flush the buffer to the "parser"
-			chunks = append(chunks, buf.Bytes())
-			buf.Reset()
-			flushCount++
-			msgsInBuffer = 0
-		}
-
-		msgsInBuffer++
-		_, err = buf.Write(s)
-		if err != nil {
-			log.Fatal("could not write to buffer")
-		}
 	}
 
-	if buf.Len() > 0 {
-		chunks = append(chunks, buf.Bytes())
-		buf.Reset()
-		flushCount++
-		msgsInBuffer = 0
-	}
+	fmt.Println("chunks count", len(chunks))
 
 	serializationEnd := time.Now()
 	parsingStart := time.Now()
@@ -130,7 +101,6 @@ func main() {
 	fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
 	fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
 	fmt.Println("serialized items", serializeCount)
-	// fmt.Println("flushed items", flushCount)
 	fmt.Println("parsedCount items", parsedCount)
 	fmt.Println("deserialized items", deserializedCount)
 	fmt.Println("total time", time.Since(start))
