@@ -51,7 +51,7 @@ func main() {
 	for i := 0; i < 1_000_000; i++ {
 		m.ID = fmt.Sprintf("%d", i)
 
-		s, err := protocol.Serialize(m)
+		s, err := protocol.SerializeCBOR(m)
 		if err != nil {
 			log.Fatal("could not serialize message", err)
 		}
@@ -86,7 +86,7 @@ func main() {
 	deserializedMessages := []protocol.KoboldMessage{}
 	for _, msg := range rawMessages {
 		var deserializedMessage protocol.KoboldMessage
-		err := protocol.Deserialize(msg, &deserializedMessage)
+		err := protocol.DeserializeCBOR(msg, &deserializedMessage)
 		if err != nil {
 			log.Fatal("could not deserialize message", err)
 		}
