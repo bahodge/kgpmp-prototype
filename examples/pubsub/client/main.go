@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/bahodge/kgpmp-prototype/pkg/protocol"
@@ -30,13 +29,8 @@ func SendMessage(conn net.Conn, message []byte) error {
 }
 
 func RunCapn(iterations int) {
-	fmt.Println("Cap'n Proto -----------------------------------------")
 	var sendBuf bytes.Buffer
 	sendBuf.Grow(1024 * 1024)
-
-	start := time.Now()
-	serializationStart := time.Now()
-	serializeCount := 0
 
 	for i := 0; i < iterations; i++ {
 		arena := capnp.SingleSegment(nil)
@@ -52,7 +46,7 @@ func RunCapn(iterations int) {
 
 		err = kmsg.SetId(fmt.Sprintf("%d", i))
 		err = kmsg.SetTopic("/hello/world")
-		err = kmsg.SetTxId(fmt.Sprintf("%d", i))
+		err = kmsg.SetTxId(fmt.Sprintf("sometxid%d", i))
 		err = kmsg.SetContent([]byte("hello there"))
 		if err != nil {
 			log.Fatal("could not set err", err)
@@ -73,15 +67,10 @@ func RunCapn(iterations int) {
 			log.Fatal("could not write bytes to buffer")
 		}
 
-		serializeCount++
 	}
 
-	serializationEnd := time.Now()
-
-	parsingStart := time.Now()
+	// parsingStart := time.Now()
 	var rawMessages [][]byte
-	parsedCount := 0
-
 	parser := protocol.NewMessageParser()
 
 	for {
@@ -105,15 +94,10 @@ func RunCapn(iterations int) {
 			}
 
 			// Update counters and append parsed messages
-			parsedCount += len(messages)
 			rawMessages = append(rawMessages, messages...)
 		}
 	}
 
-	parsingEnd := time.Now()
-
-	deserializationStart := time.Now()
-	deserializedCount := 0
 	deserializedMessages := []protos.KoboldMessage{}
 	for _, payload := range rawMessages {
 		msg, err := capnp.Unmarshal(payload)
@@ -127,26 +111,10 @@ func RunCapn(iterations int) {
 		}
 
 		deserializedMessages = append(deserializedMessages, kmsg)
-		deserializedCount++
 	}
-
-	deserializationEnd := time.Now()
-
-	fmt.Println("serialization time", serializationEnd.Sub(serializationStart))
-	fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
-	fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
-	fmt.Println("serialized items", serializeCount)
-	fmt.Println("parsedCount items", parsedCount)
-	fmt.Println("deserialized items", deserializedCount)
-	fmt.Println("total time", time.Since(start))
 }
 
-func RunCbor(iterations int) {
-	fmt.Println("CBOR -----------------------------------------")
-
-	start := time.Now()
-
-	serializationStart := time.Now()
+func RunCBOR(iterations int) {
 	var sendBuf bytes.Buffer
 	sendBuf.Grow(1024 * 1024)
 
@@ -155,8 +123,8 @@ func RunCbor(iterations int) {
 		m := protocol.KoboldMessage{
 			ID:      fmt.Sprintf("%d", i),
 			Op:      protocol.Reply,
-			Topic:   "",
-			TxID:    "",
+			Topic:   "/hello/world",
+			TxID:    fmt.Sprintf("sometxid - %d", i),
 			Content: []byte("hello world"),
 		}
 
@@ -173,15 +141,9 @@ func RunCbor(iterations int) {
 		serializeCount++
 	}
 
-	serializationEnd := time.Now()
-
-	// --- parsing start
-
-	parsingStart := time.Now()
 	parser := protocol.NewMessageParser()
 
 	var rawMessages [][]byte
-	parsedCount := 0
 
 	for {
 		// Read a chunk of data from the buffer
@@ -204,15 +166,11 @@ func RunCbor(iterations int) {
 			}
 
 			// Update counters and append parsed messages
-			parsedCount += len(messages)
+			// parsedCount += len(messages)
 			rawMessages = append(rawMessages, messages...)
 		}
 	}
 
-	parsingEnd := time.Now()
-
-	deserializationStart := time.Now()
-	deserializedCount := 0
 	deserializedMessages := []protocol.KoboldMessage{}
 	for _, msg := range rawMessages {
 		var deserializedMessage protocol.KoboldMessage
@@ -222,22 +180,79 @@ func RunCbor(iterations int) {
 		}
 
 		deserializedMessages = append(deserializedMessages, deserializedMessage)
-		deserializedCount++
+	}
+}
+
+func RunJSON(iterations int) {
+	var sendBuf bytes.Buffer
+	sendBuf.Grow(1024 * 1024)
+
+	for i := 0; i < iterations; i++ {
+		m := protocol.KoboldMessage{
+			ID:      fmt.Sprintf("%d", i),
+			Op:      protocol.Reply,
+			Topic:   "/hello/world",
+			TxID:    fmt.Sprintf("sometxid - %d", i),
+			Content: []byte("hello world"),
+		}
+
+		s, err := protocol.SerializeJSON(m)
+		if err != nil {
+			log.Fatal("could not serialize message", err)
+		}
+
+		_, err = sendBuf.Write(s)
+		if err != nil {
+			log.Fatal("could not write to buffer")
+		}
+
 	}
 
-	deserializationEnd := time.Now()
+	parser := protocol.NewMessageParser()
 
-	fmt.Println("serialization time", serializationEnd.Sub(serializationStart))
-	fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
-	fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
-	fmt.Println("serialized items", serializeCount)
-	fmt.Println("parsedCount items", parsedCount)
-	fmt.Println("deserialized items", deserializedCount)
-	fmt.Println("total time", time.Since(start))
+	var rawMessages [][]byte
+
+	for {
+		// Read a chunk of data from the buffer
+		chunk := make([]byte, 1024*1024)
+		n, err := sendBuf.Read(chunk)
+		if err != nil {
+			if err == io.EOF {
+				// End of buffer reached, exit the loop
+				break
+			}
+			log.Fatal("could not read", err)
+		}
+
+		// Process the chunk only if it contains data
+		if n > 0 {
+			// Parse the chunk to extract complete messages
+			messages, err := parser.Parse(chunk[:n]) // Pass only the portion of the chunk that contains valid data
+			if err != nil {
+				log.Fatal("unable to parse data", err)
+			}
+
+			// Update counters and append parsed messages
+			rawMessages = append(rawMessages, messages...)
+		}
+	}
+
+	deserializedMessages := []protocol.KoboldMessage{}
+	for _, msg := range rawMessages {
+		var deserializedMessage protocol.KoboldMessage
+		err := protocol.DeserializeJSON(msg, &deserializedMessage)
+		if err != nil {
+			log.Fatal("could not deserialize message", err)
+		}
+
+		deserializedMessages = append(deserializedMessages, deserializedMessage)
+	}
+
 }
 
 func main() {
 	const ITERATIONS = 1_000_000
 	RunCapn(ITERATIONS)
-	RunCbor(ITERATIONS)
+	RunCBOR(ITERATIONS)
+	RunJSON(ITERATIONS)
 }

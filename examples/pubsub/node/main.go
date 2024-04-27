@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/bahodge/kgpmp-prototype/pkg/parsers"
+	"github.com/bahodge/kgpmp-prototype/pkg/protocol"
 	"net"
 	"time"
 )
@@ -30,7 +30,7 @@ func handleClient(conn net.Conn) {
 	}()
 
 	// Create a new message p for each client connection
-	p := parsers.NewMessageParser()
+	p := protocol.NewMessageParser()
 
 	// Buffer to store incoming data from the client
 	buffer := make([]byte, 1024*1024)

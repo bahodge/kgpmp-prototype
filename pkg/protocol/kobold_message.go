@@ -33,12 +33,12 @@ type KoboldMetadata struct {
 // TODO: I think that most of the metadata can be put in the main message and omitted as neccessary
 
 type KoboldMessage struct {
-	ID       string          `cbor:"id"`
-	Op       KoboldOperation `cbor:"op"`
-	Topic    string          `cbor:"topic"`
-	Metadata KoboldMetadata  `cbor:"metadata,omitempty"`
-	TxID     string          `cbor:"tx_id,omitempty"`
-	Content  []byte          `cbor:"content,omitempty"`
+	ID       string          `json:"id" cbor:"id"`
+	Op       KoboldOperation `json:"op" cbor:"op"`
+	Topic    string          `json:"topic" cbor:"topic"`
+	Metadata KoboldMetadata  `json:"metadata" cbor:"metadata,omitempty"`
+	TxID     string          `json:"tx_id" cbor:"tx_id,omitempty"`
+	Content  []byte          `json:"content" cbor:"content,omitempty"`
 }
 
 func PrefixWithLength(payload []byte) ([]byte, error) {

@@ -58,14 +58,14 @@ type KoboldProto struct {
 Each message is to be prefixed by a 4 byte integer describing the length of the message. This includes all delimiters included.
 
 ```
-<prefix><proto>\r\n<content\r\n
+<prefix><proto>
 ```
 
 Examples
 
 ```
 # request
-<prefix><BINARYENCODEDPROTO>\r\nmycoolcontent\r\n
+<prefix><encoded message>
 ```
 
 ## Behavior
@@ -76,3 +76,15 @@ Examples
 # on connect to node a client will advertise
 /<client_id>/proxy
 ```
+
+## Encoding Benchmarks
+
+although my tests are shitty and primitive, they show that json is slow as fuck and that Cap'n Proto and CBOR are relatively similar. There are great benefits to using either.
+
+This is all running on my local machine and therefore all tests are uncontrolled. This is all biased, I know. I'm not interested in being really thorough.
+
+| Encoding    | Iterations | Serialization(ms) | Parsing(ms) | Deserialization(ms) | Total Time(ms) |
+| ----------- | ---------- | ----------------- | ----------- | ------------------- | -------------- |
+| Cap'n Proto | 1_000_000  | 1250.15           | 96.87       | 334.78              | 1681.90        |
+| CBOR        | 1_000_000  | 725.97            | 86.38       | 672.57              | 1484.96        |
+| JSON        | 1_000_000  | 1095.81           | 122.90      | 1595.00             | 2813.74        |
