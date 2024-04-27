@@ -68,25 +68,19 @@ Examples
 <prefix><encoded message>
 ```
 
-## Behavior
-
-### Proxy
-
-```
-# on connect to node a client will advertise
-/<client_id>/proxy
-```
-
 ## Encoding Benchmarks
+
+TLDR; `cbor` seems to be the best starting point for encoding that I can come up with.
 
 although my tests are shitty and primitive, they show that json is slow as fuck and that Cap'n Proto and CBOR are pretty similar. There are great benefits to using either.
 
-This is all running on my local machine and therefore all tests are uncontrolled. This is all biased, I know. I'm not interested in being really thorough. There are some obvious optimizations that can happen.
+This is all running on my local machine and therefore all tests are uncontrolled. This is all biased, I know. I'm not interested in being really thorough. There are some obvious optimizations that can happen. I'm sure I could write a faster or more efficient encoding system but I doubt it will be as robust as any of these others. `cbor` wins for now.
 
 | Encoding    | Iterations | Serialization(ms) | Parsing(ms) | Deserialization(ms) | Total Time(ms) |
 | ----------- | ---------- | ----------------- | ----------- | ------------------- | -------------- |
 | Cap'n Proto | 1_000_000  | 1250.15           | 96.87       | 334.78              | 1681.90        |
 | CBOR        | 1_000_000  | 725.97            | 86.38       | 672.57              | 1484.96        |
+| Msgpack     | 1_000_000  | untested          | untested    | untested            | untested       |
 | JSON        | 1_000_000  | 1095.81           | 122.90      | 1595.00             | 2813.74        |
 
 ```
@@ -95,33 +89,43 @@ goarch: amd64
 pkg: github.com/bahodge/kgpmp-prototype
 cpu: 13th Gen Intel(R) Core(TM) i9-13900K
 BenchmarkRunCapn1
-BenchmarkRunCapn1-24          	    2822	    446723 ns/op
+BenchmarkRunCapn1-24             	    2774	    418643 ns/op
 BenchmarkRunCapn100
-BenchmarkRunCapn100-24        	    2792	    545444 ns/op
+BenchmarkRunCapn100-24           	    2532	    514270 ns/op
 BenchmarkRunCapn10000
-BenchmarkRunCapn10000-24      	      64	  17428263 ns/op
+BenchmarkRunCapn10000-24         	      69	  17829592 ns/op
 BenchmarkRunCapn100000
-BenchmarkRunCapn100000-24     	       6	 174051278 ns/op
+BenchmarkRunCapn100000-24        	       6	 169682814 ns/op
 BenchmarkRunCapn1000000
-BenchmarkRunCapn1000000-24    	       1	1611933194 ns/op
+BenchmarkRunCapn1000000-24       	       1	1751991028 ns/op
 BenchmarkRunCBOR1
-BenchmarkRunCBOR1-24          	    3554	    378665 ns/op
+BenchmarkRunCBOR1-24             	    3051	    373979 ns/op
 BenchmarkRunCBOR100
-BenchmarkRunCBOR100-24        	    2382	    589961 ns/op
+BenchmarkRunCBOR100-24           	    1687	    598904 ns/op
 BenchmarkRunCBOR10000
-BenchmarkRunCBOR10000-24      	      79	  16089542 ns/op
+BenchmarkRunCBOR10000-24         	      72	  16247588 ns/op
 BenchmarkRunCBOR100000
-BenchmarkRunCBOR100000-24     	       6	 178540513 ns/op
+BenchmarkRunCBOR100000-24        	       6	 177246694 ns/op
 BenchmarkRunCBOR1000000
-BenchmarkRunCBOR1000000-24    	       1	1619351192 ns/op
+BenchmarkRunCBOR1000000-24       	       1	1685516807 ns/op
+BenchmarkRunMsgpack1
+BenchmarkRunMsgpack1-24          	    4377	    401017 ns/op
+BenchmarkRunMsgpack100
+BenchmarkRunMsgpack100-24        	    1807	    676553 ns/op
+BenchmarkRunMsgpack10000
+BenchmarkRunMsgpack10000-24      	      63	  18400306 ns/op
+BenchmarkRunMsgpack100000
+BenchmarkRunMsgpack100000-24     	       7	 179656233 ns/op
+BenchmarkRunMsgpack1000000
+BenchmarkRunMsgpack1000000-24    	       1	1929324637 ns/op
 BenchmarkRunJSON1
-BenchmarkRunJSON1-24          	    4522	    399335 ns/op
+BenchmarkRunJSON1-24             	    3318	    457479 ns/op
 BenchmarkRunJSON100
-BenchmarkRunJSON100-24        	    1872	    662897 ns/op
+BenchmarkRunJSON100-24           	    1335	    763268 ns/op
 BenchmarkRunJSON10000
-BenchmarkRunJSON10000-24      	      40	  26437023 ns/op
+BenchmarkRunJSON10000-24         	      44	  26974104 ns/op
 BenchmarkRunJSON100000
-BenchmarkRunJSON100000-24     	       5	 236492804 ns/op
+BenchmarkRunJSON100000-24        	       5	 235920948 ns/op
 BenchmarkRunJSON1000000
-BenchmarkRunJSON1000000-24    	       1	3029596593 ns/op
+BenchmarkRunJSON1000000-24       	       1	2910120434 ns/op
 ```

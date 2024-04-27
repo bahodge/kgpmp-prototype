@@ -16,6 +16,12 @@ func BenchmarkRunCBOR10000(b *testing.B)   { benchmarkRunCBOR(10_000, b) }
 func BenchmarkRunCBOR100000(b *testing.B)  { benchmarkRunCBOR(100_000, b) }
 func BenchmarkRunCBOR1000000(b *testing.B) { benchmarkRunCBOR(1_000_000, b) }
 
+func BenchmarkRunMsgpack1(b *testing.B)       { benchmarkRunMsgpack(1, b) }
+func BenchmarkRunMsgpack100(b *testing.B)     { benchmarkRunMsgpack(100, b) }
+func BenchmarkRunMsgpack10000(b *testing.B)   { benchmarkRunMsgpack(10_000, b) }
+func BenchmarkRunMsgpack100000(b *testing.B)  { benchmarkRunMsgpack(100_000, b) }
+func BenchmarkRunMsgpack1000000(b *testing.B) { benchmarkRunMsgpack(1_000_000, b) }
+
 func BenchmarkRunJSON1(b *testing.B)       { benchmarkRunJSON(1, b) }
 func BenchmarkRunJSON100(b *testing.B)     { benchmarkRunJSON(100, b) }
 func BenchmarkRunJSON10000(b *testing.B)   { benchmarkRunJSON(10_000, b) }
@@ -25,6 +31,12 @@ func BenchmarkRunJSON1000000(b *testing.B) { benchmarkRunJSON(1_000_000, b) }
 func benchmarkRunCapn(iters int, b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		RunCapn(iters)
+	}
+}
+
+func benchmarkRunMsgpack(iters int, b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		RunMsgpack(iters)
 	}
 }
 

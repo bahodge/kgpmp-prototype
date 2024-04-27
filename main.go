@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/bahodge/kgpmp-prototype/pkg/protocol"
@@ -111,6 +112,74 @@ func RunCapn(iterations int) {
 		}
 
 		deserializedMessages = append(deserializedMessages, kmsg)
+	}
+}
+func RunMsgpack(iterations int) {
+	var sendBuf bytes.Buffer
+	sendBuf.Grow(1024 * 1024)
+
+	serializeCount := 0
+	for i := 0; i < iterations; i++ {
+		m := protocol.KoboldMessage{
+			ID:      fmt.Sprintf("%d", i),
+			Op:      protocol.Reply,
+			Topic:   "/hello/world",
+			TxID:    fmt.Sprintf("sometxid - %d", i),
+			Content: []byte("hello world"),
+		}
+
+		s, err := protocol.SerializeMsgpack(m)
+		if err != nil {
+			log.Fatal("could not serialize message", err)
+		}
+
+		_, err = sendBuf.Write(s)
+		if err != nil {
+			log.Fatal("could not write to buffer")
+		}
+
+		serializeCount++
+	}
+
+	parser := protocol.NewMessageParser()
+
+	// var rawMessages []protocol.KoboldMessage
+	var rawMessages [][]byte
+
+	for {
+		// Read a chunk of data from the buffer
+		chunk := make([]byte, 1024*1024)
+		n, err := sendBuf.Read(chunk)
+		if err != nil {
+			if err == io.EOF {
+				// End of buffer reached, exit the loop
+				break
+			}
+			log.Fatal("could not read", err)
+		}
+
+		// Process the chunk only if it contains data
+		if n > 0 {
+			// Parse the chunk to extract complete messages
+			messages, err := parser.Parse(chunk[:n]) // Pass only the portion of the chunk that contains valid data
+			if err != nil {
+				log.Fatal("unable to parse data", err)
+			}
+
+			// Update counters and append parsed messages
+			rawMessages = append(rawMessages, messages...)
+		}
+	}
+
+	deserializedMessages := []protocol.KoboldMessage{}
+	for _, msg := range rawMessages {
+		var deserializedMessage protocol.KoboldMessage
+		err := protocol.DeserializeMsgpack(msg, &deserializedMessage)
+		if err != nil {
+			log.Fatal("could not deserialize message", err)
+		}
+
+		deserializedMessages = append(deserializedMessages, deserializedMessage)
 	}
 }
 
@@ -251,8 +320,23 @@ func RunJSON(iterations int) {
 }
 
 func main() {
-	const ITERATIONS = 1_000_000
-	RunCapn(ITERATIONS)
+	const ITERATIONS = 10_000_000
+	capnStart := time.Now()
+	// RunCapn(ITERATIONS)
+	capnEnd := time.Now()
+	msgpackStart := time.Now()
+	RunMsgpack(ITERATIONS)
+	msgpackEnd := time.Now()
+	cborStart := time.Now()
 	RunCBOR(ITERATIONS)
-	RunJSON(ITERATIONS)
+	cborEnd := time.Now()
+	jsonStart := time.Now()
+	// RunJSON(ITERATIONS)
+	jsonEnd := time.Now()
+
+	fmt.Println("capn total time", capnEnd.Sub(capnStart))
+	fmt.Println("msgpack total time", msgpackEnd.Sub(msgpackStart))
+	fmt.Println("cbor total time", cborEnd.Sub(cborStart))
+	fmt.Println("json total time", jsonEnd.Sub(jsonStart))
+
 }
