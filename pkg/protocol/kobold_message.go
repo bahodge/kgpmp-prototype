@@ -16,13 +16,13 @@ const MAX_MSG_SIZE = 1024 * 1024
 
 const (
 	Unsupported KoboldOperation = iota
-	Subscribe
-	Unsubscribe
-	Publish
 	Advertise
-	Unadvertise
-	Request
+	Publish
 	Reply
+	Request
+	Subscribe
+	Unadvertise
+	Unsubscribe
 )
 
 type KoboldMetadata struct {

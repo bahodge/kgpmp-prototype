@@ -14,7 +14,6 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 | ----------------- | ------------------------------------------------------------------------------ |
 | Publish/Subscribe | `n` message producers sending messages to `x` consumers without a buffer       |
 | Request/Reply     | a client sends a transaction to be acknowledged and returned by another client |
-| Proxy             | a client can connect to another client using the node as a proxy               |
 
 **Non Core patterns**
 
@@ -22,7 +21,7 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 | ------------- | ----------------------------------------------------------------------------------- |
 | Message Queue | `n` producers enqueue messages and `x` consumers dequeue messages at their own pace |
 | Data Store    | ability to CRUD a key/value from multiple clients                                   |
-| Byte Stream   | send a stream of bytes over a persistent connection                                 |
+| Stream        | send a stream of bytes over a persistent connection                                 |
 
 ## Terms
 
