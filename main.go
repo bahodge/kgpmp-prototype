@@ -167,7 +167,6 @@ func RunCBOR(iterations int) {
 			}
 
 			// Update counters and append parsed messages
-			// parsedCount += len(messages)
 			rawMessages = append(rawMessages, messages...)
 		}
 	}
