@@ -39,7 +39,7 @@ I think that it's pretty important that the `node` no as little information as t
 ## The Proto struct
 
 ```go
-type KoboldProto struct {
+type KoboldMessage struct {
 	// Client scoped unique indentifier for this message
 	ID string `cbor:"id"`
 	// Operation to be performed
@@ -79,12 +79,49 @@ Examples
 
 ## Encoding Benchmarks
 
-although my tests are shitty and primitive, they show that json is slow as fuck and that Cap'n Proto and CBOR are relatively similar. There are great benefits to using either.
+although my tests are shitty and primitive, they show that json is slow as fuck and that Cap'n Proto and CBOR are pretty similar. There are great benefits to using either.
 
-This is all running on my local machine and therefore all tests are uncontrolled. This is all biased, I know. I'm not interested in being really thorough.
+This is all running on my local machine and therefore all tests are uncontrolled. This is all biased, I know. I'm not interested in being really thorough. There are some obvious optimizations that can happen.
 
 | Encoding    | Iterations | Serialization(ms) | Parsing(ms) | Deserialization(ms) | Total Time(ms) |
 | ----------- | ---------- | ----------------- | ----------- | ------------------- | -------------- |
 | Cap'n Proto | 1_000_000  | 1250.15           | 96.87       | 334.78              | 1681.90        |
 | CBOR        | 1_000_000  | 725.97            | 86.38       | 672.57              | 1484.96        |
 | JSON        | 1_000_000  | 1095.81           | 122.90      | 1595.00             | 2813.74        |
+
+```
+goos: linux
+goarch: amd64
+pkg: github.com/bahodge/kgpmp-prototype/examples/pubsub/client
+cpu: 13th Gen Intel(R) Core(TM) i9-13900K
+BenchmarkRunCapn1
+BenchmarkRunCapn1-24          	    2822	    446723 ns/op
+BenchmarkRunCapn100
+BenchmarkRunCapn100-24        	    2792	    545444 ns/op
+BenchmarkRunCapn10000
+BenchmarkRunCapn10000-24      	      64	  17428263 ns/op
+BenchmarkRunCapn100000
+BenchmarkRunCapn100000-24     	       6	 174051278 ns/op
+BenchmarkRunCapn1000000
+BenchmarkRunCapn1000000-24    	       1	1611933194 ns/op
+BenchmarkRunCBOR1
+BenchmarkRunCBOR1-24          	    3554	    378665 ns/op
+BenchmarkRunCBOR100
+BenchmarkRunCBOR100-24        	    2382	    589961 ns/op
+BenchmarkRunCBOR10000
+BenchmarkRunCBOR10000-24      	      79	  16089542 ns/op
+BenchmarkRunCBOR100000
+BenchmarkRunCBOR100000-24     	       6	 178540513 ns/op
+BenchmarkRunCBOR1000000
+BenchmarkRunCBOR1000000-24    	       1	1619351192 ns/op
+BenchmarkRunJSON1
+BenchmarkRunJSON1-24          	    4522	    399335 ns/op
+BenchmarkRunJSON100
+BenchmarkRunJSON100-24        	    1872	    662897 ns/op
+BenchmarkRunJSON10000
+BenchmarkRunJSON10000-24      	      40	  26437023 ns/op
+BenchmarkRunJSON100000
+BenchmarkRunJSON100000-24     	       5	 236492804 ns/op
+BenchmarkRunJSON1000000
+BenchmarkRunJSON1000000-24    	       1	3029596593 ns/op
+```
