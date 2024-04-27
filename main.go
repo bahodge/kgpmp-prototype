@@ -143,6 +143,7 @@ func RunCBOR(iterations int) {
 
 	parser := protocol.NewMessageParser()
 
+	// var rawMessages []protocol.KoboldMessage
 	var rawMessages [][]byte
 
 	for {
