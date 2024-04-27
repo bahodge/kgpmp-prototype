@@ -41,10 +41,33 @@ type KoboldMessage struct {
 	Content  []byte          `cbor:"content,omitempty"`
 }
 
+func PrefixWithLength(payload []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	// Check if payload exceeds maximum message size
+	if len(payload) > MAX_MSG_SIZE {
+		return nil, errors.New("message is too large")
+	}
+
+	// Write payload length prefix to the buffer
+	bytesBigEndian := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytesBigEndian, uint32(len(payload)))
+	_, err := buf.Write(bytesBigEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = buf.Write(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+
+}
+
 func SerializeCBOR(msg KoboldMessage) ([]byte, error) {
 	var payload []byte
 	var err error
-	var buf bytes.Buffer
 
 	payload, err = cbor.Marshal(msg)
 	if err != nil {
@@ -56,21 +79,7 @@ func SerializeCBOR(msg KoboldMessage) ([]byte, error) {
 		return nil, errors.New("message is too large")
 	}
 
-	// Write payload length prefix to the buffer
-	bytesBigEndian := make([]byte, 4)
-	binary.BigEndian.PutUint32(bytesBigEndian, uint32(len(payload)))
-	_, err = buf.Write(bytesBigEndian)
-	if err != nil {
-		return nil, err
-	}
-
-	// Write payload to the buffer
-	_, err = buf.Write(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return PrefixWithLength(payload)
 }
 
 func DeserializeCBOR(data []byte, m *KoboldMessage) error {
@@ -82,7 +91,6 @@ func DeserializeCBOR(data []byte, m *KoboldMessage) error {
 func SerializeJSON(msg KoboldMessage) ([]byte, error) {
 	var payload []byte
 	var err error
-	var buf bytes.Buffer
 
 	payload, err = json.Marshal(msg)
 	if err != nil {
@@ -95,24 +103,11 @@ func SerializeJSON(msg KoboldMessage) ([]byte, error) {
 	}
 
 	// Write payload length prefix to the buffer
-	bytesBigEndian := make([]byte, 4)
-	binary.BigEndian.PutUint32(bytesBigEndian, uint32(len(payload)))
-	_, err = buf.Write(bytesBigEndian)
-	if err != nil {
-		return nil, err
-	}
-
-	// Write payload to the buffer
-	_, err = buf.Write(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return PrefixWithLength(payload)
 }
 
 func DeserializeJSON(data []byte, m *KoboldMessage) error {
 	// in this case we assume that we already have chopped off the first 4 bytes
-	// as part of the parsing step. we now just need to Unmarshal cbor
+	// as part of the parsing step. we now just need to Unmarshal json
 	return json.Unmarshal(data, m)
 }

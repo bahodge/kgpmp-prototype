@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
-	"os"
+	"time"
 
 	"capnproto.org/go/capnp/v3"
+	"github.com/bahodge/kgpmp-prototype/pkg/protocol"
 	"github.com/bahodge/kgpmp-prototype/protos"
 )
 
@@ -26,213 +29,215 @@ func SendMessage(conn net.Conn, message []byte) error {
 	return nil
 }
 
+func RunCapn(iterations int) {
+	fmt.Println("Cap'n Proto -----------------------------------------")
+	var sendBuf bytes.Buffer
+	sendBuf.Grow(1024 * 1024)
+
+	start := time.Now()
+	serializationStart := time.Now()
+	serializeCount := 0
+
+	for i := 0; i < iterations; i++ {
+		arena := capnp.SingleSegment(nil)
+		msg, seg, err := capnp.NewMessage(arena)
+		if err != nil {
+			log.Fatal("could not create new message", err)
+		}
+
+		kmsg, err := protos.NewRootKoboldMessage(seg)
+		if err != nil {
+			log.Fatal("could not spawn new root message", err)
+		}
+
+		err = kmsg.SetId(fmt.Sprintf("%d", i))
+		err = kmsg.SetTopic("/hello/world")
+		err = kmsg.SetTxId(fmt.Sprintf("%d", i))
+		err = kmsg.SetContent([]byte("hello there"))
+		if err != nil {
+			log.Fatal("could not set err", err)
+		}
+
+		payload, err := msg.Marshal()
+		if err != nil {
+			log.Fatal("could not marshal message!", err)
+		}
+
+		b, err := protocol.PrefixWithLength(payload)
+		if err != nil {
+			log.Fatal("could not prefix", err)
+		}
+
+		_, err = sendBuf.Write(b)
+		if err != nil {
+			log.Fatal("could not write bytes to buffer")
+		}
+
+		serializeCount++
+	}
+
+	serializationEnd := time.Now()
+
+	parsingStart := time.Now()
+	var rawMessages [][]byte
+	parsedCount := 0
+
+	parser := protocol.NewMessageParser()
+
+	for {
+		// Read a chunk of data from the buffer
+		chunk := make([]byte, 1024*1024)
+		n, err := sendBuf.Read(chunk)
+		if err != nil {
+			if err == io.EOF {
+				// End of buffer reached, exit the loop
+				break
+			}
+			log.Fatal("could not read", err)
+		}
+
+		// Process the chunk only if it contains data
+		if n > 0 {
+			// Parse the chunk to extract complete messages
+			messages, err := parser.Parse(chunk[:n]) // Pass only the portion of the chunk that contains valid data
+			if err != nil {
+				log.Fatal("unable to parse data", err)
+			}
+
+			// Update counters and append parsed messages
+			parsedCount += len(messages)
+			rawMessages = append(rawMessages, messages...)
+		}
+	}
+
+	parsingEnd := time.Now()
+
+	deserializationStart := time.Now()
+	deserializedCount := 0
+	deserializedMessages := []protos.KoboldMessage{}
+	for _, payload := range rawMessages {
+		msg, err := capnp.Unmarshal(payload)
+		if err != nil {
+			log.Fatal("could not unmarshal payload", err)
+		}
+
+		kmsg, err := protos.ReadRootKoboldMessage(msg)
+		if err != nil {
+			log.Fatal("could not read root message", err)
+		}
+
+		deserializedMessages = append(deserializedMessages, kmsg)
+		deserializedCount++
+	}
+
+	deserializationEnd := time.Now()
+
+	fmt.Println("serialization time", serializationEnd.Sub(serializationStart))
+	fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
+	fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
+	fmt.Println("serialized items", serializeCount)
+	fmt.Println("parsedCount items", parsedCount)
+	fmt.Println("deserialized items", deserializedCount)
+	fmt.Println("total time", time.Since(start))
+}
+
+func RunCbor(iterations int) {
+	fmt.Println("CBOR -----------------------------------------")
+
+	start := time.Now()
+
+	serializationStart := time.Now()
+	var sendBuf bytes.Buffer
+	sendBuf.Grow(1024 * 1024)
+
+	serializeCount := 0
+	for i := 0; i < iterations; i++ {
+		m := protocol.KoboldMessage{
+			ID:      fmt.Sprintf("%d", i),
+			Op:      protocol.Reply,
+			Topic:   "",
+			TxID:    "",
+			Content: []byte("hello world"),
+		}
+
+		s, err := protocol.SerializeCBOR(m)
+		if err != nil {
+			log.Fatal("could not serialize message", err)
+		}
+
+		_, err = sendBuf.Write(s)
+		if err != nil {
+			log.Fatal("could not write to buffer")
+		}
+
+		serializeCount++
+	}
+
+	serializationEnd := time.Now()
+
+	// --- parsing start
+
+	parsingStart := time.Now()
+	parser := protocol.NewMessageParser()
+
+	var rawMessages [][]byte
+	parsedCount := 0
+
+	for {
+		// Read a chunk of data from the buffer
+		chunk := make([]byte, 1024*1024)
+		n, err := sendBuf.Read(chunk)
+		if err != nil {
+			if err == io.EOF {
+				// End of buffer reached, exit the loop
+				break
+			}
+			log.Fatal("could not read", err)
+		}
+
+		// Process the chunk only if it contains data
+		if n > 0 {
+			// Parse the chunk to extract complete messages
+			messages, err := parser.Parse(chunk[:n]) // Pass only the portion of the chunk that contains valid data
+			if err != nil {
+				log.Fatal("unable to parse data", err)
+			}
+
+			// Update counters and append parsed messages
+			parsedCount += len(messages)
+			rawMessages = append(rawMessages, messages...)
+		}
+	}
+
+	parsingEnd := time.Now()
+
+	deserializationStart := time.Now()
+	deserializedCount := 0
+	deserializedMessages := []protocol.KoboldMessage{}
+	for _, msg := range rawMessages {
+		var deserializedMessage protocol.KoboldMessage
+		err := protocol.DeserializeCBOR(msg, &deserializedMessage)
+		if err != nil {
+			log.Fatal("could not deserialize message", err)
+		}
+
+		deserializedMessages = append(deserializedMessages, deserializedMessage)
+		deserializedCount++
+	}
+
+	deserializationEnd := time.Now()
+
+	fmt.Println("serialization time", serializationEnd.Sub(serializationStart))
+	fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
+	fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
+	fmt.Println("serialized items", serializeCount)
+	fmt.Println("parsedCount items", parsedCount)
+	fmt.Println("deserialized items", deserializedCount)
+	fmt.Println("total time", time.Since(start))
+}
+
 func main() {
-	arena := capnp.SingleSegment(nil)
-
-	msg, seg, err := capnp.NewMessage(arena)
-	if err != nil {
-		log.Fatal("could not create new message", err)
-	}
-
-	kmsg, err := protos.NewRootKoboldMessage(seg)
-	if err != nil {
-		log.Fatal("could not spawn new root message", err)
-	}
-
-	kmsg.SetId("asdf")
-	kmsg.SetTopic("/hello/world")
-	kmsg.SetTxId("some id")
-	kmsg.SetContent([]byte("hello there"))
-
-	id, _ := kmsg.Id()
-	topic, _ := kmsg.Topic()
-
-	fmt.Printf("%s (%s topic)\n", id, topic)
-
-	b, err := msg.Marshal()
-	if err != nil {
-		log.Fatal("could not marshal message", err)
-	}
-
-	fmt.Println("len(b)", len(b))
-
-	kmsg, err = protos.ReadRootKoboldMessage(msg)
-	if err != nil {
-		log.Fatal("could not read root message", err)
-	}
-	txId, _ := kmsg.TxId()
-	content, _ := kmsg.Content()
-	fmt.Printf("%s (topic: %s) (tx_id: %s) (content: %s)\n", id, topic, txId, string(content))
-
-	encoder := capnp.NewEncoder(os.Stdout)
-
-	err = encoder.Encode(kmsg.Message())
-	if err != nil {
-		log.Fatal("could not encode message", err)
-	}
-
-	// // Connect to the server
-	// // conn, err := net.Dial("tcp", "localhost:8080")
-	// // if err != nil {
-	// // 	fmt.Println("Error connecting:", err)
-	// // 	return
-	// // }
-	// // defer conn.Close()
-	//
-	// start := time.Now()
-	// m := protocol.KoboldMessage{
-	// 	// ID:    fmt.Sprintf("%d", i),
-	// 	Op:      protocol.Reply,
-	// 	Topic:   "test",
-	// 	TxID:    "",
-	// 	Content: []byte(""),
-	// }
-	//
-	// serializationStart := time.Now()
-	//
-	// chunks := [][]byte{}
-	//
-	// serializeCount := 0
-	// for i := 0; i < 1_000_000; i++ {
-	// 	m.ID = fmt.Sprintf("%d", i)
-	//
-	// 	s, err := protocol.SerializeCBOR(m)
-	// 	if err != nil {
-	// 		log.Fatal("could not serialize message", err)
-	// 	}
-	//
-	// 	chunks = append(chunks, s)
-	//
-	// 	serializeCount++
-	// }
-	//
-	// fmt.Println("chunks count", len(chunks))
-	//
-	// serializationEnd := time.Now()
-	// parsingStart := time.Now()
-	// parser := protocol.NewMessageParser()
-	//
-	// var rawMessages [][]byte
-	// parsedCount := 0
-	// for _, chunk := range chunks {
-	// 	messages, err := parser.Parse(chunk)
-	// 	if err != nil {
-	// 		log.Fatal("unable to parse data", err)
-	// 	}
-	//
-	// 	parsedCount += len(messages)
-	// 	rawMessages = append(rawMessages, messages...)
-	// }
-	//
-	// parsingEnd := time.Now()
-	//
-	// deserializationStart := time.Now()
-	// deserializedCount := 0
-	// deserializedMessages := []protocol.KoboldMessage{}
-	// for _, msg := range rawMessages {
-	// 	var deserializedMessage protocol.KoboldMessage
-	// 	err := protocol.DeserializeCBOR(msg, &deserializedMessage)
-	// 	if err != nil {
-	// 		log.Fatal("could not deserialize message", err)
-	// 	}
-	//
-	// 	deserializedMessages = append(deserializedMessages, deserializedMessage)
-	// 	deserializedCount++
-	// }
-	//
-	// deserializationEnd := time.Now()
-	//
-	// fmt.Println("serialization time", serializationEnd.Sub(serializationStart))
-	// fmt.Println("parsing time", parsingEnd.Sub(parsingStart))
-	// fmt.Println("deserialization time", deserializationEnd.Sub(deserializationStart))
-	// fmt.Println("serialized items", serializeCount)
-	// fmt.Println("parsedCount items", parsedCount)
-	// fmt.Println("deserialized items", deserializedCount)
-	// fmt.Println("total time", time.Since(start))
-	//
-	// // fmt.Printf("s %#v\n", string(s))
-	//
-	// // fmt.Printf("dec %#v\n", dec)
-	//
-	// // cbormsg := Message{
-	// // 	ID:            "",
-	// // 	MessageType:   1,
-	// // 	Topic:         "/hello/world",
-	// // 	TransactionID: "hereisthesenderid",
-	// // 	Content:       []byte("hello from message!The Parse function you provided parses a byte slice data into individual messages based on a length prefix encoding scheme. Each message is prefixed with a 4-byte length indicating the size of the message payload. The parsed result's structure is a slice of byte slices ([][]byte), where each inner byte slice represents a parsed message. Here's a breakdown of the parsed result's structure: The messages variable is a slice of byte slices ([][]byte), where each element represents a parsed message. Inside the loop, each complete message extracted from the buffer (message) is appended to the messages slice. After processing all complete messages in the buffer, the function returns the messages slice containing all parsed messages."),
-	// // 	Timestamp:     time.Now().Unix(),
-	// // }
-	// //
-	// // totalStart := time.Now()
-	// // rtts := []time.Duration{}
-	// // requests := 0
-	// // replies := 0
-	// // msgsOut := 0
-	// // bytesOut := 0
-	// //
-	// // msg, _ := cbor.Marshal(cbormsg)
-	// // // Convert int32 to bytes (big-endian)
-	// // bytesBigEndian := make([]byte, 4)
-	// // binary.BigEndian.PutUint32(bytesBigEndian, uint32(len(msg)))
-	// // msg = append(bytesBigEndian, msg...)
-	// // var sendBuffer []byte
-	// // maxBufferSize := 1024 * 1024 // 1mb
-	// //
-	// // iters := 10_000 * 1000
-	// // // In total we are sending 8.5GB over the network to the server.
-	// // for i := 0; i < iters; i++ {
-	// // 	start := time.Now()
-	// //
-	// // 	sendBuffer = append(sendBuffer, msg...)
-	// // 	msgsOut++
-	// //
-	// // 	if len(sendBuffer) > maxBufferSize || i+1 == iters {
-	// // 		requests++
-	// // 		if err := SendMessage(conn, sendBuffer); err != nil {
-	// // 			fmt.Println("Error sending message:", err)
-	// // 			fmt.Println("sent", i)
-	// // 			return
-	// // 		}
-	// //
-	// // 		// clear the send buffer
-	// // 		bytesOut += len(sendBuffer)
-	// // 		sendBuffer = sendBuffer[:0]
-	// // 	}
-	// //
-	// // 	rtts = append(rtts, time.Since(start))
-	// // }
-	// //
-	// // var sum int64
-	// // var mininum int64
-	// // var maximum int64
-	// // for _, dur := range rtts {
-	// // 	d := int64(dur)
-	// // 	if d > maximum {
-	// // 		maximum = d
-	// // 	}
-	// // 	if mininum == 0 {
-	// // 		mininum = d
-	// // 	} else if mininum > d {
-	// // 		mininum = d
-	// // 	}
-	// //
-	// // 	sum += d
-	// //
-	// // }
-	// //
-	// // avg := float64(sum) / float64(len(rtts))
-	// // fmt.Println("total roundtrips", len(rtts))
-	// // fmt.Println("total requests sent", requests)
-	// // fmt.Println("total bytes sent", bytesOut)
-	// // fmt.Println("total messages sent", msgsOut)
-	// // fmt.Println("total replies received", replies)
-	// // fmt.Println("total messages sent/received", replies+requests)
-	// // fmt.Println("min iter time", float64(mininum)/float64(time.Microsecond), "microseconds")
-	// // fmt.Println("max iter time", float64(maximum)/float64(time.Microsecond), "microseconds")
-	// // fmt.Println("average iter time", avg/float64(time.Microsecond), "microseconds")
-	// // fmt.Println("total command time", time.Since(totalStart))
-	// // fmt.Println("msgs per second", int64(float64(time.Second)/avg))
-	// //
-	// // // time.Sleep(time.Second)
-	//
+	const ITERATIONS = 1_000_000
+	RunCapn(ITERATIONS)
+	RunCbor(ITERATIONS)
 }

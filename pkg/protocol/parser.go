@@ -19,11 +19,10 @@ var parseCalls int
 
 // Extracts raw message bytes from a byte slice.
 func (p *MessageParser) Parse(data []byte) ([][]byte, error) {
+	// this should be removed when reading from network connection or in the
+	// case where messages could be split between multiple chunks
 	parseCalls++
 	var messages [][]byte
-
-	// Create a reader for the incoming data
-	reader := bytes.NewReader(data)
 
 	// Append incoming data to the buffer
 	p.buffer = append(p.buffer, data...)
@@ -32,11 +31,9 @@ func (p *MessageParser) Parse(data []byte) ([][]byte, error) {
 	for len(p.buffer) >= 4 {
 		// Read the length prefix
 		var messageLength uint32
-		if err := binary.Read(reader, binary.BigEndian, &messageLength); err != nil {
+		if err := binary.Read(bytes.NewReader(p.buffer[:4]), binary.BigEndian, &messageLength); err != nil {
 			return nil, err
 		}
-
-		// fmt.Println("p.buffer", p.buffer)
 
 		// Check if the buffer contains the complete message
 		if len(p.buffer) >= int(messageLength)+4 {
