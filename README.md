@@ -23,6 +23,12 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 | Data Store    | ability to CRUD a key/value from multiple clients                                   |
 | Stream        | send a stream of bytes over a persistent connection                                 |
 
+## Functionality
+
+`kgpmp` is meant to support the following functionalities to facilitation communication between systems. These systems can be running on a single machine on an isolated network or a cluster of machines working together across the world.
+
+
+
 ## Terms
 
 | term    | definition                                                                       |
