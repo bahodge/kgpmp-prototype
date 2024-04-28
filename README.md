@@ -27,19 +27,33 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 
 `kgpmp` is meant to support the following functionalities to facilitation communication between systems. These systems can be running on a single machine on an isolated network or a cluster of machines working together across the world.
 
+- unidirectional `client` -> `node`
+- bidirectional `client` <-> `node`
+- unidirectional `node` -> `node`
+- bidirectional `node` <-> `node`
 
+## Large Messages
+
+A message must be able to pass from a client -> node -> `n` nodes -> `x` `clients`. So forwarding a message while maintaining it's integrity is essential. So in order to support larger payloads, we will have to cut messages into chunks. The simplest way I can think to do this is to add a 2 fields to the metadata struct. `part`, `total_parts`. The receiving client can simply track all parts of the message with `id` and reconstruct the larger message.
+
+**Client based handlers**
+
+So very simply, the receiving client can receive any chunk of a message and know the total number of parts of the message. If a part was not received in the correct amount of time, the client could ask for a retransmission of just that part. The receiver client would just need to retrace the message back to it's origin and request that specific part. Although I think the functionality of this is necessary, I think it is quite cumbersome and could be done better.
+
+**Node based handlers**
+
+Another easy way to get data verification is for clients to upload the entire message to the `node` and have the node validate that all parts are received. This puts the data validation part on the `node` and removes the complexity of retracing a message back to the originating client. It does put more demand on available disk or memory of the node.
 
 ## Terms
 
-| term    | definition                                                                       |
-| ------- | -------------------------------------------------------------------------------- |
-| prefix  | 4 byte integer describing the number of bytes included in this message           |
-| proto   | an encoded struct containing the required fields to route and handle the message |
-| content | message content                                                                  |
+| term   | definition                                                                       |
+| ------ | -------------------------------------------------------------------------------- |
+| prefix | 4 byte integer describing the number of bytes included in this message           |
+| proto  | an encoded struct containing the required fields to route and handle the message |
 
 ## Protocol
 
-I think that it's pretty important that the `node` no as little information as to the content is transporting between clients. By removing the encoding of the content from the `<proto>` payload, you can completely separate the actual message content.
+I think that it's pretty important that the `node` no as little information as to the content is transporting between clients.
 
 ## The Proto struct
 
