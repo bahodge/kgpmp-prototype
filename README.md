@@ -27,42 +27,58 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 
 Messages that are sent from clients to nodes
 
-| Message Type | Description                         | Request                       | Reply                       |
-| ------------ | ----------------------------------- | ----------------------------- | --------------------------- |
-| Publish      | (push) publish a message to a topic | PUBLISH $node /my/topic msg   | -                           |
-| Subscribe    | (push) subscribe to a topic         | SUBSCRIBE $node /my/topic     | REPLY $client /my/topic msg |
-| Unsubscribe  | (push) unsubscribe from a topic     | UNSUBSCRIBE $node /my/topic   | REPLY $client /my/topic msg |
-| Request      | send a request to a service topic.  | REQUEST $node /my/topic msg   | REPLY $client /my/topic msg |
-| Reply        | send a reply to a request.          | REPLY $node /my/topic msg     | -                           |
-| Advertise    | advertise a service topic           | ADVERTISE $node /my/topic msg | REPLY $client /my/topic msg |
-| Unadvertise  | unnadvertise a service topic        | UNADVERTISE $node /my/topic   | REPLY $client /my/topic msg |
+| Message Type | Description                         |
+| ------------ | ----------------------------------- |
+| Publish      | (push) publish a message to a topic |
+| Request      | send a request to a service topic.  |
+| Reply        | send a reply to a request.          |
 
-```
-Publish {
-  topic: "/my/topic",
-  options: { ... },
-  content: []
+| Request Type | Description                                        |
+| ------------ | -------------------------------------------------- |
+| Forward      | forward the request to a client advertised service |
+| Authenticate | authenticate the connection                        |
+| Subscribe    | subscribe to a topic                               |
+| Unsubscribe  | unsubscribe from a topic                           |
+| Advertise    | advertise a service topic                          |
+| Undvertise   | unadvertise a service topic                        |
+| NodeInfo     | get information about a node                       |
+
+| Topic Keywords | Description                               |
+| -------------- | ----------------------------------------- |
+| $node          | node the client is currently connected to |
+
+```go
+type Publish<T> struct {
+    id: string
+    topic: string
+    metadata: Metadata // information about the client/connection
+    message: T
 }
 ---
-Request {
-    topic: "$node/$[action]/my/topic",
-    tx_id: "my tx",
-    options: { ... },
-    content: []
+// client creates a request
+// client dispatches requests to node w/ tx_id
+// node receives request
+// node enqueues request in service request queue
+// service dequeues next request
+// service handles request
+// service dispatches reply to node w/ tx_id
+// node enqueues reply in client reply queue
+// client handles reply
+type Request<T> struct {
+    id: string
+    request_type: "FORWARD|AUTHENTICATE|SUBSCRIBE|ADVERTISE|UNADVERTISE|UNSUBSCRIBE|NODE_INFO"
+    topic: string
+    tx_id: string
+    metadata: Metadata // information about the client/connection
+    message: T
 }
 ---
-Request {
-    topic: "/my/topic",
-    tx_id: "my tx",
-    options: { ... },
-    content: []
-}
----
-Reply {
-  topic: "my/topic",
-  tx_id: "my tx",
-  error_code: 0,
-  content: []
+type Reply<T> struct {
+    id: string
+    topic: string
+    tx_id: string
+    metadata: Metadata // information about the client/connection
+    message: T
 }
 ```
 
