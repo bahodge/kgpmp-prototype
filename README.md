@@ -23,6 +23,92 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 | Data Store    | ability to CRUD a key/value from multiple clients                                   |
 | Stream        | send a stream of bytes over a persistent connection                                 |
 
+## Message Types
+
+Messages that are sent from clients to nodes
+
+| Message Type | Description                         | Request                       | Reply                       |
+| ------------ | ----------------------------------- | ----------------------------- | --------------------------- |
+| Publish      | (push) publish a message to a topic | PUBLISH $node /my/topic msg   | -                           |
+| Subscribe    | (push) subscribe to a topic         | SUBSCRIBE $node /my/topic     | REPLY $client /my/topic msg |
+| Unsubscribe  | (push) unsubscribe from a topic     | UNSUBSCRIBE $node /my/topic   | REPLY $client /my/topic msg |
+| Request      | send a request to a service topic.  | REQUEST $node /my/topic msg   | REPLY $client /my/topic msg |
+| Reply        | send a reply to a request.          | REPLY $node /my/topic msg     | -                           |
+| Advertise    | advertise a service topic           | ADVERTISE $node /my/topic msg | REPLY $client /my/topic msg |
+| Unadvertise  | unnadvertise a service topic        | UNADVERTISE $node /my/topic   | REPLY $client /my/topic msg |
+
+```
+Publish {
+  topic: "/my/topic",
+  options: { ... },
+  content: []
+}
+---
+Request {
+    topic: "$node/$[action]/my/topic",
+    tx_id: "my tx",
+    options: { ... },
+    content: []
+}
+---
+Request {
+    topic: "/my/topic",
+    tx_id: "my tx",
+    options: { ... },
+    content: []
+}
+---
+Reply {
+  topic: "my/topic",
+  tx_id: "my tx",
+  error_code: 0,
+  content: []
+}
+```
+
+Messages that are sent from a client to a node
+
+| Message Type | Description                      | Conceptual Example                                      |
+| ------------ | -------------------------------- | ------------------------------------------------------- |
+| NodeInfo     | request information about a node | REQUEST $sys/node/info \\ REPLY $sys/node/info NodeInfo |
+| NodeInfo     | request information about a node | REQUEST $sys/node/info \\ REPLY $sys/node/info NodeInfo |
+
+| Message Type | Description                                       | Conceptual Example             |
+| ------------ | ------------------------------------------------- | ------------------------------ |
+| CloseQueue   | close the message queue                           | REQUEST $sys/queue/close       |
+| Enqueue      | push a message to a message queue                 | REQUEST $sys/queue/enqueue msg |
+| Dequeue      | remove a message from the head of a message queue | REQUEST $sys/queue/dequeue msg |
+| Peek         | inspect the next message in the queue             | REQUEST $sys/queue/peek msg    |
+| List         | list all queues                                   | REQUEST $sys/queue/list msg    |
+
+**System**
+
+| Message Type | Description   | Conceptual Example  |
+| ------------ | ------------- | ------------------- |
+| Error        | error message | ERROR /my/topic msg |
+
+**Message Queue**
+
+```
+REQUEST {
+    topic: $sys/queue/open,
+    tx_id: "asdf",
+    content: {
+        topic: /my_queue,
+        length: 500,
+    }
+}
+
+REPLY {
+    topic: $sys/queue/open,
+    tx_id: "asdf",
+    content: {
+        topic: /my_queue,
+        length: 500,
+    }
+}
+```
+
 ## Functionality
 
 `kgpmp` is meant to support the following functionalities to facilitation communication between systems. These systems can be running on a single machine on an isolated network or a cluster of machines working together across the world.
