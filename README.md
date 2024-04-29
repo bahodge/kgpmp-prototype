@@ -1,8 +1,15 @@
 # Description
 
-The purpose of this project is to track the specification for the Kobold General Purpose Messaging Protocol (KGPMP) throughout it's development. This spec will describe the transfer of data between `nodes` and `clients`. the KGPMP is meant for the the Kobold Distributed Messaging System (KDMS) under active development. Kobold uses a client/server model where messages are sent from a `client` to a `node` where they are then routed to other `clients`.
+The purpose of this project is to track the specification for the Kobold General Purpose Messaging Protocol (KGPMP) throughout it's development. This spec will describe the transfer of data between `nodes` and `clients`. the KGPMP is meant for the the Kobold Distributed Messaging System (KDMS) under active development. Kobold is an in memory messaging system that uses a client/server model where messages are sent from a `client` to a `node` where they are then routed to other `clients`.
 
-Although enforcing types across modern applications is very nice, it isn't essential. To me this means that if we wanted to enforce some sort of type safety, we could do it on the client side. A client could parse the `kgpmp` message and then validate the content of it as a type.
+## Functionality
+
+`kgpmp` is meant to support the following functionalities to facilitation communication between systems. These systems can be running on a single machine on an isolated network or a cluster of machines working together across the world.
+
+- unidirectional `client` -> `node`
+- bidirectional `client` <-> `node`
+- unidirectional `node` -> `node`
+- bidirectional `node` <-> `node`
 
 ## Purpose
 
@@ -12,8 +19,8 @@ The purpose of KGPMP is to standardize message passing between `clients` and `no
 
 | Pattern           | Description                                                                    |
 | ----------------- | ------------------------------------------------------------------------------ |
-| Publish/Subscribe | `n` message producers sending messages to `x` consumers without a buffer       |
 | Request/Reply     | a client sends a transaction to be acknowledged and returned by another client |
+| Publish/Subscribe | `n` message producers sending messages to `x` consumers without a buffer       |
 
 **Non Core patterns**
 
@@ -82,58 +89,6 @@ type Reply<T> struct {
 }
 ```
 
-Messages that are sent from a client to a node
-
-| Message Type | Description                      | Conceptual Example                                      |
-| ------------ | -------------------------------- | ------------------------------------------------------- |
-| NodeInfo     | request information about a node | REQUEST $sys/node/info \\ REPLY $sys/node/info NodeInfo |
-| NodeInfo     | request information about a node | REQUEST $sys/node/info \\ REPLY $sys/node/info NodeInfo |
-
-| Message Type | Description                                       | Conceptual Example             |
-| ------------ | ------------------------------------------------- | ------------------------------ |
-| CloseQueue   | close the message queue                           | REQUEST $sys/queue/close       |
-| Enqueue      | push a message to a message queue                 | REQUEST $sys/queue/enqueue msg |
-| Dequeue      | remove a message from the head of a message queue | REQUEST $sys/queue/dequeue msg |
-| Peek         | inspect the next message in the queue             | REQUEST $sys/queue/peek msg    |
-| List         | list all queues                                   | REQUEST $sys/queue/list msg    |
-
-**System**
-
-| Message Type | Description   | Conceptual Example  |
-| ------------ | ------------- | ------------------- |
-| Error        | error message | ERROR /my/topic msg |
-
-**Message Queue**
-
-```
-REQUEST {
-    topic: $sys/queue/open,
-    tx_id: "asdf",
-    content: {
-        topic: /my_queue,
-        length: 500,
-    }
-}
-
-REPLY {
-    topic: $sys/queue/open,
-    tx_id: "asdf",
-    content: {
-        topic: /my_queue,
-        length: 500,
-    }
-}
-```
-
-## Functionality
-
-`kgpmp` is meant to support the following functionalities to facilitation communication between systems. These systems can be running on a single machine on an isolated network or a cluster of machines working together across the world.
-
-- unidirectional `client` -> `node`
-- bidirectional `client` <-> `node`
-- unidirectional `node` -> `node`
-- bidirectional `node` <-> `node`
-
 ## Large Messages
 
 A message must be able to pass from a client -> node -> `n` nodes -> `x` `clients`. So forwarding a message while maintaining it's integrity is essential. So in order to support larger payloads, we will have to cut messages into chunks. The simplest way I can think to do this is to add a 2 fields to the metadata struct. `part`, `total_parts`. The receiving client can simply track all parts of the message with `id` and reconstruct the larger message.
@@ -154,27 +109,6 @@ Another easy way to get data verification is for clients to upload the entire me
 | proto  | an encoded struct containing the required fields to route and handle the message |
 
 ## Protocol
-
-I think that it's pretty important that the `node` no as little information as to the content is transporting between clients.
-
-## The Proto struct
-
-```go
-type KoboldMessage struct {
-	// Client scoped unique indentifier for this message
-	ID string `cbor:"id"`
-	// Operation to be performed
-	Op KoboldOperation `cbor:"op"`
-	// the topic for which this message is to be forwarded to
-	Topic string `cbor:"topic"`
-	// data describing the message and it's origins
-	Metadata KoboldMetadata `cbor:"metadata,omitempty"`
-	// Used for request/reply to tie the request and reply together to the same client/connection
-	TxID string `cbor:"tx_id,omitempty"`
-
-	Content []byte `cbor:"content,omitempty"`
-}
-```
 
 Each message is to be prefixed by a 4 byte integer describing the length of the message. This includes all delimiters included.
 
