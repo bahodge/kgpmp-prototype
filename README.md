@@ -66,7 +66,7 @@ type Publish<T> struct {
 // client handles reply
 type Request<T> struct {
     id: string
-    request_type: "FORWARD|AUTHENTICATE|SUBSCRIBE|ADVERTISE|UNADVERTISE|UNSUBSCRIBE|NODE_INFO"
+    request_type: RequestType,
     topic: string
     tx_id: string
     metadata: Metadata // information about the client/connection
