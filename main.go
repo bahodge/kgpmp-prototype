@@ -120,12 +120,15 @@ func RunMsgpack(iterations int) {
 
 	serializeCount := 0
 	for i := 0; i < iterations; i++ {
-		m := protocol.KoboldMessage{
-			ID:      fmt.Sprintf("%d", i),
-			Op:      protocol.Reply,
-			Topic:   "/hello/world",
-			TxID:    fmt.Sprintf("sometxid - %d", i),
-			Content: []byte("hello world"),
+		m := protocol.Message{
+			Id:          fmt.Sprintf("%d", i),
+			MessageType: protocol.Reply,
+			Topic:       "/hello/world",
+			TxId:        fmt.Sprintf("sometxid - %d", i),
+			Headers:     protocol.Headers{},
+			Content:     []byte("hello world"),
+			Errors:      []protocol.Error{},
+			Timestamp:   time.Now().UnixMicro(),
 		}
 
 		s, err := protocol.SerializeMsgpack(m)
@@ -171,9 +174,9 @@ func RunMsgpack(iterations int) {
 		}
 	}
 
-	deserializedMessages := []protocol.KoboldMessage{}
+	deserializedMessages := []protocol.Message{}
 	for _, msg := range rawMessages {
-		var deserializedMessage protocol.KoboldMessage
+		var deserializedMessage protocol.Message
 		err := protocol.DeserializeMsgpack(msg, &deserializedMessage)
 		if err != nil {
 			log.Fatal("could not deserialize message", err)
@@ -189,12 +192,15 @@ func RunCBOR(iterations int) {
 
 	serializeCount := 0
 	for i := 0; i < iterations; i++ {
-		m := protocol.KoboldMessage{
-			ID:      fmt.Sprintf("%d", i),
-			Op:      protocol.Reply,
-			Topic:   "/hello/world",
-			TxID:    fmt.Sprintf("sometxid - %d", i),
-			Content: []byte("hello world"),
+		m := protocol.Message{
+			Id:          fmt.Sprintf("%d", i),
+			MessageType: protocol.Reply,
+			Topic:       "/hello/world",
+			TxId:        fmt.Sprintf("sometxid - %d", i),
+			Headers:     protocol.Headers{},
+			Content:     []byte("hello world"),
+			Errors:      []protocol.Error{},
+			Timestamp:   time.Now().UnixMicro(),
 		}
 
 		s, err := protocol.SerializeCBOR(m)
@@ -240,9 +246,9 @@ func RunCBOR(iterations int) {
 		}
 	}
 
-	deserializedMessages := []protocol.KoboldMessage{}
+	deserializedMessages := []protocol.Message{}
 	for _, msg := range rawMessages {
-		var deserializedMessage protocol.KoboldMessage
+		var deserializedMessage protocol.Message
 		err := protocol.DeserializeCBOR(msg, &deserializedMessage)
 		if err != nil {
 			log.Fatal("could not deserialize message", err)
@@ -257,12 +263,15 @@ func RunJSON(iterations int) {
 	sendBuf.Grow(1024 * 1024)
 
 	for i := 0; i < iterations; i++ {
-		m := protocol.KoboldMessage{
-			ID:      fmt.Sprintf("%d", i),
-			Op:      protocol.Reply,
-			Topic:   "/hello/world",
-			TxID:    fmt.Sprintf("sometxid - %d", i),
-			Content: []byte("hello world"),
+		m := protocol.Message{
+			Id:          fmt.Sprintf("%d", i),
+			MessageType: protocol.Reply,
+			Topic:       "/hello/world",
+			TxId:        fmt.Sprintf("sometxid - %d", i),
+			Headers:     protocol.Headers{},
+			Content:     []byte("hello world"),
+			Errors:      []protocol.Error{},
+			Timestamp:   time.Now().UnixMicro(),
 		}
 
 		s, err := protocol.SerializeJSON(m)
@@ -306,9 +315,9 @@ func RunJSON(iterations int) {
 		}
 	}
 
-	deserializedMessages := []protocol.KoboldMessage{}
+	deserializedMessages := []protocol.Message{}
 	for _, msg := range rawMessages {
-		var deserializedMessage protocol.KoboldMessage
+		var deserializedMessage protocol.Message
 		err := protocol.DeserializeJSON(msg, &deserializedMessage)
 		if err != nil {
 			log.Fatal("could not deserialize message", err)

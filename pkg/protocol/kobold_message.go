@@ -10,36 +10,67 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type KoboldOperation uint8
-
 const MAX_MSG_SIZE = 1024 * 1024
 
+type MessageType uint8
+
 const (
-	Unsupported KoboldOperation = iota
-	Advertise
-	Publish
-	Reply
-	Request
-	Subscribe
-	Unadvertise
-	Unsubscribe
+	Unsupported MessageType = iota
+	Request                 // Send a request to a service topic
+	Reply                   // Send a reply from a service topic
+	Advertise               // Initiate a service topic
+	Unadvertise             // Close a service topic
+	Publish                 // Publish a message to a topic
+	Subscribe               // Subscribe to messages on a topic
+	Unsubscribe             // Unsubscribe from a topic
 )
 
-type KoboldMetadata struct {
-	ClientID     string `msgpack:"client_id" cbor:"client_id"`
-	ConnectionID string `msgpack:"conn_id" cbor:"conn_id"`
-	Token        string `msgpack:"token" cbor:"token,omitempty"`
+type ErrorCode uint8
+
+const (
+	CodeNoError ErrorCode = iota
+	CodeServiceTopicNotFound
+	CodeCouldNotHandleMessage
+	CodeMalformedMessage
+	CodeUnauthorized
+)
+
+var (
+	ErrorServiceTopicNotFound  = errors.New("service topic not found")
+	ErrorCouldNotHandleMessage = errors.New("could not handle message")
+	ErrorMalformedMessage      = errors.New("malformed message")
+	ErrorUnauthorized          = errors.New("unauthorized")
+)
+
+// type Message struct {
+// 	ID       string          `msgpack:"id" json:"id" cbor:"id"`
+// 	Op       KoboldOperation `msgpack:"op" json:"op" cbor:"op"`
+// 	Topic    string          `msgpack:"topic" json:"topic" cbor:"topic"`
+// 	Metadata KoboldMetadata  `msgpack:"Metadata" json:"metadata" cbor:"metadata,omitempty"`
+// 	TxID     string          `msgpack:"tx_id" json:"tx_id" cbor:"tx_id,omitempty"`
+// 	Content  []byte          `msgpack:"content" json:"content" cbor:"content,omitempty"`
+// }
+
+type Message struct {
+	Id          string      `cbor:"id"`
+	MessageType MessageType `cbor:"message_type"`
+	Topic       string      `cbor:"topic"`
+	TxId        string      `cbor:"tx_id,omitempty"`
+	Headers     Headers     `cbor:"headers,omitempty"`
+	Content     []byte      `cbor:"content,omitempty"`
+	Errors      []Error     `cbor:"errors,omitempty"`
+	Timestamp   int64       `cbor:"timestamp,omitempty"`
 }
 
-// TODO: I think that most of the metadata can be put in the main message and omitted as neccessary
+type Error struct {
+	Message string    `cbor:"message,omitempty"`
+	Code    ErrorCode `cbor:"code,omitempty"`
+}
 
-type KoboldMessage struct {
-	ID       string          `msgpack:"id" json:"id" cbor:"id"`
-	Op       KoboldOperation `msgpack:"op" json:"op" cbor:"op"`
-	Topic    string          `msgpack:"topic" json:"topic" cbor:"topic"`
-	Metadata KoboldMetadata  `msgpack:"Metadata" json:"metadata" cbor:"metadata,omitempty"`
-	TxID     string          `msgpack:"tx_id" json:"tx_id" cbor:"tx_id,omitempty"`
-	Content  []byte          `msgpack:"content" json:"content" cbor:"content,omitempty"`
+type Headers struct {
+	ClientId  string `cbor:"client_id,omitempty"`
+	ConnId    string `cbor:"conn_id,omitempty"`
+	AuthToken string `cbor:"auth_token,omitempty"`
 }
 
 func PrefixWithLength(payload []byte) ([]byte, error) {
@@ -66,7 +97,7 @@ func PrefixWithLength(payload []byte) ([]byte, error) {
 
 }
 
-func SerializeCBOR(msg KoboldMessage) ([]byte, error) {
+func SerializeCBOR(msg Message) ([]byte, error) {
 	var payload []byte
 	var err error
 
@@ -83,13 +114,13 @@ func SerializeCBOR(msg KoboldMessage) ([]byte, error) {
 	return PrefixWithLength(payload)
 }
 
-func DeserializeCBOR(data []byte, m *KoboldMessage) error {
+func DeserializeCBOR(data []byte, m *Message) error {
 	// in this case we assume that we already have chopped off the first 4 bytes
 	// as part of the parsing step. we now just need to Unmarshal cbor
 	return cbor.Unmarshal(data, m)
 }
 
-func SerializeMsgpack(msg KoboldMessage) ([]byte, error) {
+func SerializeMsgpack(msg Message) ([]byte, error) {
 	var payload []byte
 	var err error
 
@@ -106,13 +137,13 @@ func SerializeMsgpack(msg KoboldMessage) ([]byte, error) {
 	return PrefixWithLength(payload)
 }
 
-func DeserializeMsgpack(data []byte, m *KoboldMessage) error {
+func DeserializeMsgpack(data []byte, m *Message) error {
 	// in this case we assume that we already have chopped off the first 4 bytes
 	// as part of the parsing step. we now just need to Unmarshal cbor
 	return msgpack.Unmarshal(data, m)
 }
 
-func SerializeJSON(msg KoboldMessage) ([]byte, error) {
+func SerializeJSON(msg Message) ([]byte, error) {
 	var payload []byte
 	var err error
 
@@ -130,7 +161,7 @@ func SerializeJSON(msg KoboldMessage) ([]byte, error) {
 	return PrefixWithLength(payload)
 }
 
-func DeserializeJSON(data []byte, m *KoboldMessage) error {
+func DeserializeJSON(data []byte, m *Message) error {
 	// in this case we assume that we already have chopped off the first 4 bytes
 	// as part of the parsing step. we now just need to Unmarshal json
 	return json.Unmarshal(data, m)

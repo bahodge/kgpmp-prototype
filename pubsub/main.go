@@ -45,7 +45,7 @@ func handleRequest(conn net.Conn) {
 
 		// Process the parsed messages
 		for _, message := range messages {
-			var dec protocol.KoboldMessage
+			var dec protocol.Message
 			err := protocol.DeserializeCBOR(message, &dec)
 			if err != nil {
 				fmt.Fprintln(os.Stdout, []any{"could not deserialize messagge", err}...)
@@ -95,19 +95,26 @@ func RunPub(addr string, topic string) {
 	msgsOut := 0
 	bytesOut := 0
 
-	for i := 0; i < 10_000; i++ {
+	for i := 0; i < 50_000; i++ {
 		start := time.Now()
-		m := protocol.KoboldMessage{
-			ID:      fmt.Sprintf("%d", i),
-			Op:      protocol.Publish,
-			Topic:   topic,
-			Content: []byte("hello world"),
+		m := protocol.Message{
+			Id:          fmt.Sprintf("%d", i),
+			MessageType: protocol.Publish,
+			Topic:       topic,
+			TxId:        "",
+			Headers:     protocol.Headers{},
+			Content:     []byte("hello world"),
+			Errors:      []protocol.Error{},
+			Timestamp:   time.Now().UnixMicro(),
 		}
 
 		s, err := protocol.SerializeCBOR(m)
 		if err != nil {
 			log.Fatal("could not serialize message", err)
+
 		}
+
+		// fmt.Println("s", s)
 
 		// Note there there is no chunking, we are just sending 1 message at a time.
 		// this does not perform optimally
